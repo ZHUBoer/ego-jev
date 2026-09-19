@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createClient,evaluateMany,validateRequest,validateResponse,routeAnswer} from './jev.mjs';
+import {createClient,evaluateMany,validateRequest,validateResponse,routeAnswer,choose} from './jev.mjs';
 const input={state:'A refund is requested.',questions:{refund:{type:'noul',instructions:'Is a refund requested?'}}};
 const body={model:'jev-test',answers:{refund:{type:'noul',noul:0.97}},usage:{input_tokens:12,output_tokens:2}};
 const ok = b => new Response(JSON.stringify(b),{status:200,headers:{'x-typesafe-request-id':'request-test'}});
@@ -63,4 +63,24 @@ test('per-request Jev model overrides client default, independently of planner',
  assert.equal(sent.model,'jev-pinned-test');
  await client.evaluate(input);
  assert.equal(sent.model,'jev-default-test');
+});
+
+test('choose performs a recorded request and preserves candidate identity or explicit no-match',async()=>{
+ let chosen='support',calls=0;
+ const options={apiKey:'test-secret',fetchImpl:async(url,options)=>{
+   calls++;const payload=JSON.parse(options.body);
+   assert.equal(payload.state.goal,'Find help for a refund');
+   assert.deepEqual(Object.keys(payload.questions.selection.criteria),['support','__none__']);
+   return ok({model:'jev-test',answers:{selection:{type:'choice',choice:chosen,confidence:1,probabilities:{support:chosen==='support'?1:0,__none__:chosen==='__none__'?1:0}}},usage:{input_tokens:1,output_tokens:1}});
+ }};
+ const input={goal:'Find help for a refund',evidence:'Observed links',candidates:[{id:'support',description:'Payment and refund support'}]};
+ const r=await choose(input,options);assert.equal(r.selectedId,'support');assert.ok(r.audit.callId);assert.equal(r.audit.transport,'injected');
+ chosen='__none__';assert.equal((await choose(input,options)).selectedId,null);assert.equal(calls,2);
+});
+
+test('choose rejects ambiguous ids and oversized menus before a request',async()=>{
+ let calls=0;const options={apiKey:'test-secret',fetchImpl:async()=>{calls++;return ok(body);}};
+ for(const candidates of [[],[{id:'a',description:'one'},{id:'a',description:'two'}],[{id:'__none__',description:'reserved'}],Array.from({length:255},(_,i)=>({id:String(i),description:'candidate'}))])
+  await assert.rejects(choose({goal:'pick',candidates},options));
+ assert.equal(calls,0);
 });

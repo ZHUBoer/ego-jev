@@ -1,11 +1,38 @@
 ---
 name: ego-jev
-description: Use Ego Lite for browser tasks, including opening websites, signing in, filling forms, clicking, screenshots, extraction, uploads/downloads, and web app testing, QA, and debugging. Provides the same user-facing workflow and complete browser capabilities as ego-browser, with Jev enabled internally for semantic judgments. Use when the user asks for ego-jev or browser automation with integrated Jev decisions; users only need to describe the browser task.
+description: Complete browser tasks with Ego Lite and actively call Jev for semantic target selection, filtering, ranking, classification and text evidence judgments. Use when the user asks for ego-jev, Ego with Jev, or a Jev-assisted browser workflow. Preserve the full ego-browser experience; actually invoke the bundled Jev helper and report recorded usage. Users only describe the task.
 ---
 
 # ego-jev
 
 Complete browser tasks with the same inputs, interaction, and results as ego-browser. Jev is an internal decision mechanism, enabled by default for suitable semantic judgments. The user describes the browser task; the agent handles observation, decisions, execution, and verification.
+
+## Required Jev use when this skill is active
+
+This skill has been selected to use Jev in the browser workflow. Reading ego-browser supplies its browser API and lifecycle; it does **not** switch the task back to a non-Jev workflow.
+
+- At the first text-based semantic decision, actually call `choose()`, `evaluate()` or `runWorkflow()` from this skill before resolving that decision. This includes choosing which observed link/button/card matches an intent, selecting a category, interpreting a textual result, and filtering/ranking items. Do not skip the call because the choice seems easy, the agent is confident, only one candidate exists (test its relevance), or the page is unfamiliar.
+- A **known action** has its exact target/value already supplied by the user, deterministic matching, an established plan, or an earlier Jev choice. Clicking it needs no additional inference. Determining which target *means* what the user wants is a semantic choice and goes through Jev. Do not relabel that choice as navigation or a known click to bypass the helper.
+- Plan, extract candidates, compute exact values, generate prose, and interpret images with existing capabilities. Batch independent judgments and reuse still-valid choices. If Jev returns no match, ambiguity or a poor result, inspect evidence and repair the plan; the task is still yours to complete.
+- Before claiming successful Jev-assisted completion, inspect this run's real call records. A task with semantic decisions should have successful network calls or a recorded attempted call and an explicit fallback explanation. If an eligible decision was accidentally resolved without Jev, correct the remaining workflow before acting; do not add a token demonstration or retrospective call solely to inflate the count.
+- A task containing only exact operations, or only unsupported visual/generative work, can legitimately use zero Jev calls. Say why in its usage summary. Never fabricate semantic work merely to force a call. No record means usage unverified; it is not evidence of zero calls.
+
+## First semantic choice: minimal invocation
+
+Resolve the actual installed directory; the local credential is loaded automatically. Candidate descriptions come from the observed page. Keep code responsible for locators and execution.
+
+```js
+const {choose} = await import('/absolute/ego-jev/scripts/jev.mjs');
+const decision = await choose({
+  goal: currentSemanticGoal,
+  evidence: observedRelevantText,
+  candidates: observedCandidates.map(c=>({id:c.id,description:c.text})),
+}, {runId:`ego-space-${task.spaceId}`});
+// selectedId is a supplied id or null. Recheck current evidence before using its local action.
+console.log({selectedId:decision.selectedId, model:decision.model, audit:decision.audit});
+```
+
+For shared-state batches and typed checks, read [API helper](references/client.md). For continuous multi-step choices, use [the workflow runner](references/workflows.md).
 
 ## User-facing contract
 
@@ -32,13 +59,13 @@ The agent maintains the goal and plan, ego-browser observes and acts, and Jev su
 
 | Work | Owner |
 | --- | --- |
-| Understand the goal, explore unfamiliar workflows, reason across steps, write text/code | Agent |
+| Understand the goal, plan exploration, reason across steps, write text/code | Agent (route observed semantic choices to Jev) |
 | Observe and operate the browser, enforce waits, map verified candidates to actual actions | ego-browser + local code |
 | Finite semantic selection, classification, per-item relevance/quality, evidence checks | Jev by default |
 | Prices, arithmetic, counts, sorting, date comparisons, exact matching | Local code |
 | Screenshots, canvas, images, visual quality | Agent vision + ego-browser |
 
-Do not call Jev for an obvious known click or exact lookup. Do not turn every browser action into an API round trip. The useful speedup comes from fewer planner turns and batched judgments, while executing known sequences together. Keep one observable outcome per internal stage and retain a valid plan until the stage changes or execution needs repair.
+A previously resolved exact click or exact lookup can run directly. An obvious-looking semantic choice still uses Jev as required above. Do not turn every browser action into an API round trip. The useful speedup comes from fewer planner turns and batched judgments, while executing known sequences together. Keep one observable outcome per internal stage and retain a valid plan until the stage changes or execution needs repair.
 
 For an understood multi-step semantic subgoal, use the [continuous workflow runner](references/workflows.md) in one browser invocation. It binds actions to current evidence, discards stale choices, detects repeated state/action cycles, and requires an actual outcome check. For known sequences use Ego directly; for independent judgments use a shared-state batch. These are internal choices, not extra steps for the user.
 
@@ -70,7 +97,7 @@ The installed ego-browser remains the authority for every browser capability. Je
 
 ## Credentials and data
 
-The helper reads `TYPESAFE_API_KEY`, then `TYPESAFE_API_KEY_FILE`, then `~/.config/ego-jev/api-key`. Keep the file outside the distributable skill with permissions 0600. Run Jev from Node, never inside `page.evaluate()` or `page.fetch()`; credentials must not enter page code. Do not echo keys, headers, or credential contents. Submit only the fields needed for the task.
+The installed credential is user-wide and independent of the current task directory. New local processes under the same OS user load it automatically; do not ask for the key again merely because this is a new session. Environment overrides take precedence and can point to a different credential. The helper reads `TYPESAFE_API_KEY`, then `TYPESAFE_API_KEY_FILE`, then `~/.config/ego-jev/api-key`. Keep the file outside the distributable skill with permissions 0600. Run Jev from Node, never inside `page.evaluate()` or `page.fetch()`; credentials must not enter page code. Do not echo keys, headers, or credential contents. Submit only the fields needed for the task.
 
 Set the Jev version per request with `model`, or through `TYPESAFE_DEFAULT_MODEL`; otherwise `jev-latest` is used. Keep model selection internal unless the user asks to configure it. Record the returned version for calibrated workloads.
 

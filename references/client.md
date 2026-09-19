@@ -67,3 +67,7 @@ The public docs disagree on null acceptance. Live v1 probes on 2026-09-20 confir
 ## Automatic local records
 
 Every call records its lifecycle, network attempts and typed result summary automatically. Use `runId` and optional `logDir` as client options, or `EGO_JEV_RUN_ID` / `EGO_JEV_LOG_DIR`. Local validation failures have no network attempt; injected test clients are explicitly labeled. Errors after logging starts include `error.audit`. See [reviewing real calls](audit.md) for task grouping, privacy, log failures and HTML export.
+
+## Minimal semantic selection
+
+`choose({goal,evidence,candidates:[{id,description}],model?}, clientOptions?)` calls Jev using the same configured credential and automatic journal. It adds an explicit no-match option and returns `selectedId` (supplied id or null), plus the full normal response and audit metadata. Supply 1..254 unique candidates; `__none__` is reserved. It does not execute an action or apply a universal confidence cutoff. Recheck page state and resolve the selected id through your local map.

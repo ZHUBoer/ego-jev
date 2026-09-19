@@ -1,34 +1,38 @@
 # ego-jev
 
-Browser automation skill for AI agents: **Ego Lite** for observation and action, **Jev** (TypeSafe) for typed semantic judgments.
+Complete browser tasks with **Ego Lite** and actively call **Jev** (TypeSafe) for semantic target selection, filtering, ranking, classification and text evidence judgments.
 
-An agent keeps the goal and the plan. Ego Lite drives a real Chromium browser — snapshots, DOM actions, keyboard/mouse, tabs, uploads/downloads, screenshots. Jev answers bounded semantic questions over a compact page state: selection, classification, per-item relevance, evidence checks. Exact work — prices, counts, sorting, matching — stays in local code.
+An agent keeps the goal and the plan. Ego Lite drives a real Chromium browser — snapshots, DOM actions, keyboard/mouse, tabs, uploads/downloads, screenshots. Jev resolves the semantic choices: which observed link, button or card actually matches the intent, how to categorise or rank items, whether the page text is real evidence. Exact work — prices, counts, sorting, matching — stays in local code.
 
 ## Why split it this way
 
 | Work | Owner |
 | --- | --- |
-| Understand the goal, explore unfamiliar flows, write text/code | Agent |
-| Observe and operate the browser, enforce waits, map candidates to actions | Ego Lite + local code |
-| Finite semantic selection, classification, per-item relevance/quality, evidence checks | Jev |
+| Understand the goal, plan exploration, reason across steps, write text/code | Agent (route observed semantic choices to Jev) |
+| Observe and operate the browser, enforce waits, map verified candidates to actions | Ego Lite + local code |
+| Finite semantic selection, classification, per-item relevance/quality, evidence checks | Jev by default |
 | Prices, arithmetic, counts, sorting, date comparison, exact matching | Local code |
 | Screenshots, canvas, images, visual quality | Agent vision + Ego Lite |
 
-The speedup comes from fewer planner turns and batched judgments — not from routing every click through an API call. A known click needs no inference.
+The speedup comes from fewer planner turns and batched judgments — not from routing every browser action through an API call.
+
+A **known action** — exact target or value already supplied by the user, deterministic matching, an established plan, or an earlier Jev choice — needs no further inference. Deciding which target *means* what the user wants is a semantic choice, and that goes through Jev. Do not relabel a semantic choice as navigation or a known click to bypass the helper.
 
 ## Layout
 
 ```
 SKILL.md                        Agent-facing contract and workflow
+agents/
+  openai.yaml                   Agent interface manifest: display name, default prompt, implicit invocation
 references/
-  client.md                     Jev HTTP helper: credentials, schemas, batching, errors
+  client.md                     Jev HTTP helper: credentials, schemas, batching, choose(), errors
   decision-design.md            How to write atomic questions and read typed answers
   workflows.md                  Bounded continuous subflow runner
   browser-integration.md        Ego Lite integration examples
   audit.md                      Local call journal: fields, limits, HTML export
   sources.md                    Source notes
 scripts/
-  jev.mjs                       Dependency-free TypeSafe client (evaluate / evaluateMany)
+  jev.mjs                       Dependency-free TypeSafe client (choose / evaluate / evaluateMany)
   workflow.mjs                  runWorkflow: observe → decide → execute → verify loop
   audit.mjs                     Append-only local JSONL journal + list/show/report
   *.test.mjs                    Test suites
@@ -62,7 +66,26 @@ printf '%s' 'YOUR_KEY' > ~/.config/ego-jev/api-key
 chmod 600 ~/.config/ego-jev/api-key
 ```
 
-Keep the key outside the skill directory. Run Jev from Node — never inside `page.evaluate()` or `page.fetch()`, so credentials never enter page code.
+The credential is user-wide and independent of the current task directory, so new local processes under the same OS user load it automatically. Keep the key outside the skill directory. Run Jev from Node — never inside `page.evaluate()` or `page.fetch()`, so credentials never enter page code.
+
+## Minimal semantic selection
+
+The shortest path for "which of these observed candidates fulfils the goal?" — one Choice request with an explicit no-match option, using the same credential and journal:
+
+```js
+const {choose} = await import('/absolute/path/ego-jev/scripts/jev.mjs');
+
+const decision = await choose({
+  goal: 'Open the help page about duplicate charges',
+  evidence: observedRelevantText,
+  candidates: observedCandidates.map(c => ({id: c.id, description: c.text})),
+});
+
+// decision.selectedId is a supplied id, or null when nothing fits.
+console.log({selectedId: decision.selectedId, model: decision.model, audit: decision.audit});
+```
+
+`selectedId` is one of the ids you supplied, or `null` for no match. `choose` performs no browser action and applies no universal confidence cutoff — recheck the page state and resolve the id through your local candidate map before executing. Supply 1–254 candidates with unique non-empty ids; `__none__` is reserved.
 
 ## Asking several questions about one page state
 
@@ -153,6 +176,8 @@ node scripts/audit.mjs report /absolute/run.jsonl /absolute/review.html
 ```
 
 The journal stores metadata only — no API keys, no authorization headers, no page contents, no entered text. It stays local and is never uploaded. Treat it as a local execution record, not a provider-signed attestation.
+
+Before claiming Jev-assisted completion, check this run's real records: a task with semantic decisions should show successful network calls, or a recorded attempted call plus an explicit fallback explanation. A task containing only exact operations can legitimately use zero calls — say why. No record means usage unverified, not zero.
 
 ## Tests
 

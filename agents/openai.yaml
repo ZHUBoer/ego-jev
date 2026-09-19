@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ego Jev"
+  short_description: "完整浏览器操作，主动使用 Jev 进行语义判断并提供实际调用记录"
+  default_prompt: "使用 $ego-jev 完成浏览器任务，在语义决策处调用 Jev，并报告实际调用统计。"
+policy:
+  allow_implicit_invocation: true
