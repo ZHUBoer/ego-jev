@@ -1,6 +1,15 @@
 # ego-jev
 
+[![skills.sh](https://skills.sh/b/ZHUBoer/ego-jev)](https://skills.sh/ZHUBoer/ego-jev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Complete browser tasks with **Ego Lite** and actively call **Jev** (TypeSafe) for semantic target selection, filtering, ranking, classification and text evidence judgments.
+
+Install with the skills CLI:
+
+```sh
+npx skills add ZHUBoer/ego-jev
+```
 
 An agent keeps the goal and the plan. Ego Lite drives a real Chromium browser — snapshots, DOM actions, keyboard/mouse, tabs, uploads/downloads, screenshots. Jev resolves the semantic choices: which observed link, button or card actually matches the intent, how to categorise or rank items, whether the page text is real evidence. Exact work — prices, counts, sorting, matching — stays in local code.
 
