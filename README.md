@@ -1,11 +1,10 @@
 # ego-jev
 
-[![skills.sh](https://skills.sh/b/ZHUBoer/ego-jev)](https://skills.sh/ZHUBoer/ego-jev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Complete browser tasks with **Ego Lite** and actively call **Jev** (TypeSafe) for semantic target selection, filtering, ranking, classification and text evidence judgments.
 
-Install with the skills CLI:
+Listed on [skills.sh](https://skills.sh/zhuboer/ego-jev/ego-jev) — install with the skills CLI:
 
 ```sh
 npx skills add ZHUBoer/ego-jev
