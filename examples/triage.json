@@ -1,0 +1,9 @@
+{
+ "model":"jev-latest",
+ "state":{"ticket":"I was charged twice for the same order. Please refund the duplicate payment. This is urgent."},
+ "questions":{
+  "department":{"type":"choice","instructions":"Which team should handle this ticket?","criteria":{"billing":"Duplicate charges and refunds","technical":"Software bugs and login failures","sales":"Pre-purchase product questions","unknown":"No relevant team"}},
+  "urgency":{"type":"score","instructions":"How explicitly urgent is the ticket?","criteria":["No urgency stated","Urgency indirectly implied","Urgency explicitly stated"]},
+  "refund":{"type":"noul","instructions":"Does the customer explicitly request a refund?"}
+ }
+}

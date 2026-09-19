@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Local credentials — never commit these
+api-key
+*.api-key
+.env
+.env.*
+!.env.example
+
+# Local call journal / logs
+logs/
+*.jsonl
